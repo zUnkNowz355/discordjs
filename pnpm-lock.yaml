@@ -401,6 +401,9 @@ importers:
       '@vercel/postgres':
         specifier: ^0.9.0
         version: 0.9.0
+      commander:
+        specifier: ^12.1.0
+        version: 12.1.0
       meilisearch:
         specifier: ^0.38.0
         version: 0.38.0(encoding@0.1.13)
