@@ -54,6 +54,7 @@
 		"undici": "6.19.8"
 	},
 	"devDependencies": {
+		"@npm/types": "^1.0.2",
 		"@types/bun": "^1.1.4",
 		"@types/node": "^18.19.45",
 		"@vitest/coverage-v8": "^2.0.5",

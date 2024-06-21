@@ -417,6 +417,9 @@ importers:
         specifier: 6.19.8
         version: 6.19.8
     devDependencies:
+      '@npm/types':
+        specifier: ^1.0.2
+        version: 1.0.2
       '@types/bun':
         specifier: ^1.1.4
         version: 1.1.4
@@ -3647,6 +3650,9 @@ packages:
   '@nodelib/fs.walk@1.2.8':
     resolution: {integrity: sha512-oGB+UxlgWcgQkgwo8GcEGwemoTFt3FIO9ababBmaGwXIoBKZ+GTy0pP185beGg7Llih/NSHSV2XAs1lnznocSg==}
     engines: {node: '>= 8'}
+
+  '@npm/types@1.0.2':
+    resolution: {integrity: sha512-KXZccTDEnWqNrrx6JjpJKU/wJvNeg9BDgjS0XhmlZab7br921HtyVbsYzJr4L+xIvjdJ20Wh9dgxgCI2a5CEQw==}
 
   '@npmcli/config@8.3.4':
     resolution: {integrity: sha512-01rtHedemDNhUXdicU7s+QYz/3JyV5Naj84cvdXGH4mgCdL+agmSYaLF4LUG4vMCLzhBO8YtS0gPpH1FGvbgAw==}
@@ -16003,6 +16009,8 @@ snapshots:
     dependencies:
       '@nodelib/fs.scandir': 2.1.5
       fastq: 1.17.1
+
+  '@npm/types@1.0.2': {}
 
   '@npmcli/config@8.3.4':
     dependencies:
