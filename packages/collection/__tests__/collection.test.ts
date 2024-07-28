@@ -772,7 +772,7 @@ describe('sort() tests', () => {
 		});
 
 		describe('returns correct sort order for test values', () => {
-			const defaultSort = Reflect.get(Collection, 'defaultSort') as (typeof Collection)['defaultSort'];
+			const defaultSort = Collection['defaultSort']; // eslint-disable-line @typescript-eslint/dot-notation
 			const testDefaultSortOrder = (firstValue: any, secondValue: any, result: number) => {
 				expect(defaultSort(firstValue, secondValue)).toStrictEqual(result);
 				expect(defaultSort(secondValue, firstValue)).toStrictEqual(result ? result * -1 : 0);
