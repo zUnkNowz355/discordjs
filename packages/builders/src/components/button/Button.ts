@@ -1,10 +1,12 @@
 import {
 	ComponentType,
-	ButtonStyle,
-	type APIMessageComponentEmoji,
 	type APIButtonComponent,
-	type APIButtonComponentWithURL,
 	type APIButtonComponentWithCustomId,
+	type APIButtonComponentWithSKUId,
+	type APIButtonComponentWithURL,
+	type APIMessageComponentEmoji,
+	type ButtonStyle,
+	type Snowflake,
 } from 'discord-api-types/v10';
 import {
 	buttonLabelValidator,
@@ -14,40 +16,39 @@ import {
 	emojiValidator,
 	urlValidator,
 	validateRequiredButtonParameters,
-} from '../Assertions';
-import { ComponentBuilder } from '../Component';
+} from '../Assertions.js';
+import { ComponentBuilder } from '../Component.js';
 
 /**
- * Represents a button component
+ * A builder that creates API-compatible JSON data for buttons.
  */
 export class ButtonBuilder extends ComponentBuilder<APIButtonComponent> {
 	/**
-	 * Creates a new button from API data
-	 * @param data - The API data to create this button with
+	 * Creates a new button from API data.
 	 *
+	 * @param data - The API data to create this button with
 	 * @example
-	 * Creating a button from an API data object
+	 * Creating a button from an API data object:
 	 * ```ts
 	 * const button = new ButtonBuilder({
-	 * 	style: 'primary',
+	 * 	custom_id: 'a cool button',
+	 * 	style: ButtonStyle.Primary,
 	 * 	label: 'Click Me',
 	 * 	emoji: {
-	 * 		name: ':smile:',
-	 * 		id: '12345678901234567890123456789012',
+	 * 		name: 'smile',
+	 * 		id: '123456789012345678',
 	 * 	},
-	 *  custom_id: '12345678901234567890123456789012',
 	 * });
 	 * ```
-	 *
 	 * @example
-	 * Creating a button using setters and API data
+	 * Creating a button using setters and API data:
 	 * ```ts
 	 * const button = new ButtonBuilder({
-	 * 	style: 'primary',
+	 * 	style: ButtonStyle.Secondary,
 	 * 	label: 'Click Me',
 	 * })
-	 * .setEmoji({ name: ':smile:', id: '12345678901234567890123456789012' })
-	 * .setCustomId('12345678901234567890123456789012');
+	 * 	.setEmoji({ name: '🙂' })
+	 * 	.setCustomId('another cool button');
 	 * ```
 	 */
 	public constructor(data?: Partial<APIButtonComponent>) {
@@ -55,9 +56,9 @@ export class ButtonBuilder extends ComponentBuilder<APIButtonComponent> {
 	}
 
 	/**
-	 * Sets the style of this button
+	 * Sets the style of this button.
 	 *
-	 * @param style - The style of the button
+	 * @param style - The style to use
 	 */
 	public setStyle(style: ButtonStyle) {
 		this.data.style = buttonStyleValidator.parse(style);
@@ -65,13 +66,12 @@ export class ButtonBuilder extends ComponentBuilder<APIButtonComponent> {
 	}
 
 	/**
-	 * Sets the URL for this button
+	 * Sets the URL for this button.
 	 *
 	 * @remarks
 	 * This method is only available to buttons using the `Link` button style.
-	 * Only three types of URL schemes are currently supported: `https://`, `http://` and `discord://`
-	 *
-	 * @param url - The URL to open when this button is clicked
+	 * Only three types of URL schemes are currently supported: `https://`, `http://`, and `discord://`.
+	 * @param url - The URL to use
 	 */
 	public setURL(url: string) {
 		(this.data as APIButtonComponentWithURL).url = urlValidator.parse(url);
@@ -79,12 +79,11 @@ export class ButtonBuilder extends ComponentBuilder<APIButtonComponent> {
 	}
 
 	/**
-	 * Sets the custom id for this button
+	 * Sets the custom id for this button.
 	 *
 	 * @remarks
 	 * This method is only applicable to buttons that are not using the `Link` button style.
-	 *
-	 * @param customId - The custom id to use for this button
+	 * @param customId - The custom id to use
 	 */
 	public setCustomId(customId: string) {
 		(this.data as APIButtonComponentWithCustomId).custom_id = customIdValidator.parse(customId);
@@ -92,17 +91,28 @@ export class ButtonBuilder extends ComponentBuilder<APIButtonComponent> {
 	}
 
 	/**
-	 * Sets the emoji to display on this button
+	 * Sets the SKU id that represents a purchasable SKU for this button.
 	 *
-	 * @param emoji - The emoji to display on this button
+	 * @remarks Only available when using premium-style buttons.
+	 * @param skuId - The SKU id to use
 	 */
-	public setEmoji(emoji: APIMessageComponentEmoji) {
-		this.data.emoji = emojiValidator.parse(emoji);
+	public setSKUId(skuId: Snowflake) {
+		(this.data as APIButtonComponentWithSKUId).sku_id = skuId;
 		return this;
 	}
 
 	/**
-	 * Sets whether this button is disabled
+	 * Sets the emoji to display on this button.
+	 *
+	 * @param emoji - The emoji to use
+	 */
+	public setEmoji(emoji: APIMessageComponentEmoji) {
+		(this.data as Exclude<APIButtonComponent, APIButtonComponentWithSKUId>).emoji = emojiValidator.parse(emoji);
+		return this;
+	}
+
+	/**
+	 * Sets whether this button is disabled.
 	 *
 	 * @param disabled - Whether to disable this button
 	 */
@@ -112,12 +122,12 @@ export class ButtonBuilder extends ComponentBuilder<APIButtonComponent> {
 	}
 
 	/**
-	 * Sets the label for this button
+	 * Sets the label for this button.
 	 *
-	 * @param label - The label to display on this button
+	 * @param label - The label to use
 	 */
 	public setLabel(label: string) {
-		this.data.label = buttonLabelValidator.parse(label);
+		(this.data as Exclude<APIButtonComponent, APIButtonComponentWithSKUId>).label = buttonLabelValidator.parse(label);
 		return this;
 	}
 
@@ -127,12 +137,13 @@ export class ButtonBuilder extends ComponentBuilder<APIButtonComponent> {
 	public toJSON(): APIButtonComponent {
 		validateRequiredButtonParameters(
 			this.data.style,
-			this.data.label,
-			this.data.emoji,
+			(this.data as Exclude<APIButtonComponent, APIButtonComponentWithSKUId>).label,
+			(this.data as Exclude<APIButtonComponent, APIButtonComponentWithSKUId>).emoji,
 			(this.data as APIButtonComponentWithCustomId).custom_id,
+			(this.data as APIButtonComponentWithSKUId).sku_id,
 			(this.data as APIButtonComponentWithURL).url,
 		);
-		// eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+
 		return {
 			...this.data,
 		} as APIButtonComponent;

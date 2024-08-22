@@ -1,17 +1,28 @@
 import { s } from '@sapphire/shapeshift';
-import { APIApplicationCommandIntegerOption, ApplicationCommandOptionType } from 'discord-api-types/v10';
+import { ApplicationCommandOptionType, type APIApplicationCommandIntegerOption } from 'discord-api-types/v10';
 import { mix } from 'ts-mixer';
-import { ApplicationCommandNumericOptionMinMaxValueMixin } from '../mixins/ApplicationCommandNumericOptionMinMaxValueMixin';
-import { ApplicationCommandOptionBase } from '../mixins/ApplicationCommandOptionBase';
-import { ApplicationCommandOptionWithChoicesAndAutocompleteMixin } from '../mixins/ApplicationCommandOptionWithChoicesAndAutocompleteMixin';
+import { ApplicationCommandNumericOptionMinMaxValueMixin } from '../mixins/ApplicationCommandNumericOptionMinMaxValueMixin.js';
+import { ApplicationCommandOptionBase } from '../mixins/ApplicationCommandOptionBase.js';
+import { ApplicationCommandOptionWithAutocompleteMixin } from '../mixins/ApplicationCommandOptionWithAutocompleteMixin.js';
+import { ApplicationCommandOptionWithChoicesMixin } from '../mixins/ApplicationCommandOptionWithChoicesMixin.js';
 
-const numberValidator = s.number.int;
+const numberValidator = s.number().int();
 
-@mix(ApplicationCommandNumericOptionMinMaxValueMixin, ApplicationCommandOptionWithChoicesAndAutocompleteMixin)
+/**
+ * A slash command integer option.
+ */
+@mix(
+	ApplicationCommandNumericOptionMinMaxValueMixin,
+	ApplicationCommandOptionWithAutocompleteMixin,
+	ApplicationCommandOptionWithChoicesMixin,
+)
 export class SlashCommandIntegerOption
 	extends ApplicationCommandOptionBase
 	implements ApplicationCommandNumericOptionMinMaxValueMixin
 {
+	/**
+	 * The type of this option.
+	 */
 	public readonly type = ApplicationCommandOptionType.Integer as const;
 
 	/**
@@ -36,6 +47,9 @@ export class SlashCommandIntegerOption
 		return this;
 	}
 
+	/**
+	 * {@inheritDoc ApplicationCommandOptionBase.toJSON}
+	 */
 	public toJSON(): APIApplicationCommandIntegerOption {
 		this.runRequiredValidations();
 
@@ -43,10 +57,11 @@ export class SlashCommandIntegerOption
 			throw new RangeError('Autocomplete and choices are mutually exclusive to each other.');
 		}
 
-		return { ...this };
+		return { ...this } as APIApplicationCommandIntegerOption;
 	}
 }
 
 export interface SlashCommandIntegerOption
 	extends ApplicationCommandNumericOptionMinMaxValueMixin,
-		ApplicationCommandOptionWithChoicesAndAutocompleteMixin<number> {}
+		ApplicationCommandOptionWithChoicesMixin<number>,
+		ApplicationCommandOptionWithAutocompleteMixin {}
