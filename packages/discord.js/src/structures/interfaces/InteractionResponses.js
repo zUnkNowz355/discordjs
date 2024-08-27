@@ -41,8 +41,8 @@ class InteractionResponses {
    * @property {boolean} [ephemeral] Whether the reply should be ephemeral
    * @property {boolean} [fetchReply] Whether to fetch the reply
    * @property {MessageFlags} [flags] Which flags to set for the message.
-   * <info>Only `MessageFlags.Ephemeral`, `MessageFlags.SuppressEmbeds`, and `MessageFlags.SuppressNotifications`
-   * can be set.</info>
+   * <info>Only `MessageFlags.Ephemeral`, `MessageFlags.SuppressEmbeds`, `MessageFlags.SuppressNotifications`,
+   * and `MessageFlags.IsVoiceMessage` can be set.</info>
    */
 
   /**

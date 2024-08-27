@@ -33,6 +33,7 @@ import {
   APIMentionableSelectComponent,
   APIModalInteractionResponseCallbackData,
   WebhookType,
+  MessageFlags,
 } from 'discord-api-types/v10';
 import {
   ApplicationCommand,
@@ -2592,3 +2593,23 @@ declare const poll: Poll;
 expectType<Collection<Snowflake, StickerPack>>(await client.fetchStickerPacks());
 expectType<Collection<Snowflake, StickerPack>>(await client.fetchStickerPacks({}));
 expectType<StickerPack>(await client.fetchStickerPacks({ packId: snowflake }));
+
+await textChannel.send({
+  files: [
+    new AttachmentBuilder('https://example.com/voice-message.ogg')
+      .setDuration(2)
+      .setWaveform('AFUqPDw3Eg2hh4+gopOYj4xthU4='),
+  ],
+  flags: MessageFlags.IsVoiceMessage,
+});
+
+await textChannel.send({
+  files: [
+    {
+      attachment: 'https://example.com/voice-message.ogg',
+      duration: 2,
+      waveform: 'AFUqPDw3Eg2hh4+gopOYj4xthU4=',
+    },
+  ],
+  flags: MessageFlags.IsVoiceMessage,
+});

@@ -102,7 +102,8 @@ class TextBasedChannel {
    * that message will be returned and no new message will be created
    * @property {StickerResolvable[]} [stickers=[]] The stickers to send in the message
    * @property {MessageFlags} [flags] Which flags to set for the message.
-   * <info>Only `MessageFlags.SuppressEmbeds` and `MessageFlags.SuppressNotifications` can be set.</info>
+   * <info>Only `MessageFlags.SuppressEmbeds`, `MessageFlags.SuppressNotifications`, and `MessageFlags.IsVoiceMessage`
+   * can be set.</info>
    */
 
   /**
