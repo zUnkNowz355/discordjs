@@ -32,7 +32,6 @@ const Status = require('../util/Status');
 const Sweepers = require('../util/Sweepers');
 
 let deprecationEmittedForPremiumStickerPacks = false;
-let deprecationEmittedForClientPresence = false;
 
 /**
  * The main hub for interacting with the Discord API, and the starting point for any bot.
@@ -140,7 +139,7 @@ class Client extends BaseClient {
      * @private
      * @type {ClientPresence}
      */
-    this.presence = new ClientPresence(this, this.options.ws.presence ?? this.options.presence);
+    this.presence = new ClientPresence(this, this.options.presence);
 
     Object.defineProperty(this, 'token', { writable: true });
     if (!this.token && 'DISCORD_TOKEN' in process.env) {
@@ -220,15 +219,6 @@ class Client extends BaseClient {
     this.emit(Events.Debug, `Provided token: ${this._censoredToken}`);
 
     if (this.options.presence) {
-      if (!deprecationEmittedForClientPresence) {
-        process.emitWarning(
-          'ClientOptions#presence is deprecated and will be removed. Use ClientOptions#ws#presence instead.',
-          'DeprecationWarning',
-        );
-
-        deprecationEmittedForClientPresence = true;
-      }
-
       this.options.ws.presence = this.presence._parse(this.options.presence);
     }
 
@@ -353,14 +343,31 @@ class Client extends BaseClient {
   }
 
   /**
+   * Options for fetching sticker packs.
+   * @typedef {Object} StickerPackFetchOptions
+   * @property {Snowflake} [packId] The id of the sticker pack to fetch
+   */
+
+  /**
    * Obtains the list of available sticker packs.
-   * @returns {Promise<Collection<Snowflake, StickerPack>>}
+   * @param {StickerPackFetchOptions} [options={}] Options for fetching sticker packs
+   * @returns {Promise<Collection<Snowflake, StickerPack>|StickerPack>}
+   * A collection of sticker packs, or a single sticker pack if a packId was provided
    * @example
    * client.fetchStickerPacks()
    *   .then(packs => console.log(`Available sticker packs are: ${packs.map(pack => pack.name).join(', ')}`))
    *   .catch(console.error);
+   * @example
+   * client.fetchStickerPacks({ packId: '751604115435421716' })
+   *   .then(pack => console.log(`Sticker pack name: ${pack.name}`))
+   *   .catch(console.error);
    */
-  async fetchStickerPacks() {
+  async fetchStickerPacks({ packId } = {}) {
+    if (packId) {
+      const data = await this.rest.get(Routes.stickerPack(packId));
+      return new StickerPack(this, data);
+    }
+
     const data = await this.rest.get(Routes.stickerPacks());
     return new Collection(data.sticker_packs.map(stickerPack => [stickerPack.id, new StickerPack(this, stickerPack)]));
   }
@@ -545,6 +552,9 @@ class Client extends BaseClient {
     if (typeof options.failIfNotExists !== 'boolean') {
       throw new DiscordjsTypeError(ErrorCodes.ClientInvalidOption, 'failIfNotExists', 'a boolean');
     }
+    if (typeof options.enforceNonce !== 'boolean') {
+      throw new DiscordjsTypeError(ErrorCodes.ClientInvalidOption, 'enforceNonce', 'a boolean');
+    }
     if (
       (typeof options.allowedMentions !== 'object' && options.allowedMentions !== undefined) ||
       options.allowedMentions === null
@@ -556,9 +566,6 @@ class Client extends BaseClient {
     }
     if (typeof options.ws !== 'object' || options.ws === null) {
       throw new DiscordjsTypeError(ErrorCodes.ClientInvalidOption, 'ws', 'an object');
-    }
-    if (typeof options.ws.presence !== 'object' || options.ws.presence === null) {
-      throw new DiscordjsTypeError(ErrorCodes.ClientInvalidOption, 'ws.presence', 'an object');
     }
     if (typeof options.rest !== 'object' || options.rest === null) {
       throw new DiscordjsTypeError(ErrorCodes.ClientInvalidOption, 'rest', 'an object');
