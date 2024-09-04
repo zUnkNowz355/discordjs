@@ -2221,10 +2221,16 @@ export class AttachmentBuilder {
   public attachment: BufferResolvable | Stream;
   public description: string | null;
   public name: string | null;
+  public title: string | null;
+  public waveform: string | null;
+  public duration: number | null;
   public get spoiler(): boolean;
   public setDescription(description: string): this;
   public setFile(attachment: BufferResolvable | Stream, name?: string): this;
   public setName(name: string): this;
+  public setTitle(title: string): this;
+  public setWaveform(waveform: string): this;
+  public setDuration(duration: number): this;
   public setSpoiler(spoiler?: boolean): this;
   public toJSON(): unknown;
   public static from(other: JSONEncodable<AttachmentPayload>): AttachmentBuilder;
@@ -4783,6 +4789,9 @@ export interface BaseApplicationCommandData {
 export interface AttachmentData {
   name?: string;
   description?: string;
+  title?: string;
+  waveform?: string;
+  duration?: number;
 }
 
 export type CommandOptionDataTypeResolvable = ApplicationCommandOptionType;
@@ -5817,6 +5826,9 @@ export interface AttachmentPayload {
   attachment: BufferResolvable | Stream;
   name?: string;
   description?: string;
+  title?: string;
+  waveform?: string;
+  duration?: number;
 }
 
 export type GlobalSweepFilter<Key, Value> = () =>
@@ -6294,8 +6306,11 @@ export interface InteractionReplyOptions extends BaseMessageOptions {
   ephemeral?: boolean;
   fetchReply?: boolean;
   flags?: BitFieldResolvable<
-    Extract<MessageFlagsString, 'Ephemeral' | 'SuppressEmbeds' | 'SuppressNotifications'>,
-    MessageFlags.Ephemeral | MessageFlags.SuppressEmbeds | MessageFlags.SuppressNotifications
+    Extract<MessageFlagsString, 'Ephemeral' | 'SuppressEmbeds' | 'SuppressNotifications' | 'IsVoiceMessage'>,
+    | MessageFlags.Ephemeral
+    | MessageFlags.SuppressEmbeds
+    | MessageFlags.SuppressNotifications
+    | MessageFlags.IsVoiceMessage
   >;
 }
 
@@ -6467,8 +6482,8 @@ export interface MessageCreateOptions extends BaseMessageOptions {
   reply?: ReplyOptions;
   stickers?: readonly StickerResolvable[];
   flags?: BitFieldResolvable<
-    Extract<MessageFlagsString, 'SuppressEmbeds' | 'SuppressNotifications'>,
-    MessageFlags.SuppressEmbeds | MessageFlags.SuppressNotifications
+    Extract<MessageFlagsString, 'SuppressEmbeds' | 'SuppressNotifications' | 'IsVoiceMessage'>,
+    MessageFlags.SuppressEmbeds | MessageFlags.SuppressNotifications | MessageFlags.IsVoiceMessage
   >;
 }
 
