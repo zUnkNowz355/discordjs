@@ -180,6 +180,8 @@
  * @property {'BulkBanUsersOptionEmpty'} BulkBanUsersOptionEmpty
 
  * @property {'PollAlreadyExpired'} PollAlreadyExpired
+
+ * @property {'PermissionOverwritesTypeMismatch'} PermissionOverwritesTypeMismatch
  */
 
 const keys = [
@@ -337,6 +339,8 @@ const keys = [
   'BulkBanUsersOptionEmpty',
 
   'PollAlreadyExpired',
+
+  'PermissionOverwritesTypeMismatch',
 ];
 
 // JSDoc for IntelliSense purposes
