@@ -6835,7 +6835,7 @@ export interface SharedInteractionResponseOptions {
   withResponse?: boolean;
 }
 
-export interface ShowModalOptions extends SharedInteractionResponseOptions {}
+export type ShowModalOptions = SharedInteractionResponseOptions;
 
 export { Snowflake };
 
