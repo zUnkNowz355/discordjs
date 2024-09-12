@@ -1,10 +1,12 @@
 'use strict';
 
 const { deprecate } = require('node:util');
+const { makeURLSearchParams } = require('@discordjs/rest');
 const { isJSONEncodable } = require('@discordjs/util');
 const { InteractionResponseType, MessageFlags, Routes, InteractionType } = require('discord-api-types/v10');
 const { DiscordjsError, ErrorCodes } = require('../../errors');
 const MessageFlagsBitField = require('../../util/MessageFlagsBitField');
+const { InteractionCallbackResponse } = require('../InteractionCallbackResponse');
 const InteractionCollector = require('../InteractionCollector');
 const InteractionResponse = require('../InteractionResponse');
 const MessagePayload = require('../MessagePayload');
@@ -22,21 +24,27 @@ const MessagePayload = require('../MessagePayload');
  */
 class InteractionResponses {
   /**
+   * Shared options for responses to a {@link BaseInteraction}.
+   * @typedef {Object} SharedInteractionResponseOptions
+   * @property {boolean} [withResponse] Whether to include an {@link InteractionCallbackResponse} as the response
+   */
+
+  /**
    * Options for deferring the reply to an {@link BaseInteraction}.
-   * @typedef {Object} InteractionDeferReplyOptions
+   * @typedef {SharedInteractionResponseOptions} InteractionDeferReplyOptions
    * @property {boolean} [ephemeral] Whether the reply should be ephemeral
    * @property {boolean} [fetchReply] Whether to fetch the reply
    */
 
   /**
    * Options for deferring and updating the reply to a {@link MessageComponentInteraction}.
-   * @typedef {Object} InteractionDeferUpdateOptions
+   * @typedef {SharedInteractionResponseOptions} InteractionDeferUpdateOptions
    * @property {boolean} [fetchReply] Whether to fetch the reply
    */
 
   /**
    * Options for a reply to a {@link BaseInteraction}.
-   * @typedef {BaseMessageOptions} InteractionReplyOptions
+   * @typedef {BaseMessageOptions|SharedInteractionResponseOptions} InteractionReplyOptions
    * @property {boolean} [tts=false] Whether the message should be spoken aloud
    * @property {boolean} [ephemeral] Whether the reply should be ephemeral
    * @property {boolean} [fetchReply] Whether to fetch the reply
@@ -47,14 +55,19 @@ class InteractionResponses {
 
   /**
    * Options for updating the message received from a {@link MessageComponentInteraction}.
-   * @typedef {MessageEditOptions} InteractionUpdateOptions
+   * @typedef {MessageEditOptions|SharedInteractionResponseOptions} InteractionUpdateOptions
    * @property {boolean} [fetchReply] Whether to fetch the reply
+   */
+
+  /**
+   * Options for showing a modal in response to a {@link BaseInteraction}
+   * @typedef {SharedInteractionResponseOptions} ShowModalOptions
    */
 
   /**
    * Defers the reply to this interaction.
    * @param {InteractionDeferReplyOptions} [options] Options for deferring the reply to this interaction
-   * @returns {Promise<Message|InteractionResponse>}
+   * @returns {Promise<Message|InteractionResponse|InteractionCallbackResponse>}
    * @example
    * // Defer the reply to this interaction
    * interaction.deferReply()
@@ -69,7 +82,7 @@ class InteractionResponses {
   async deferReply(options = {}) {
     if (this.deferred || this.replied) throw new DiscordjsError(ErrorCodes.InteractionAlreadyReplied);
     this.ephemeral = options.ephemeral ?? false;
-    await this.client.rest.post(Routes.interactionCallback(this.id, this.token), {
+    const response = await this.client.rest.post(Routes.interactionCallback(this.id, this.token), {
       body: {
         type: InteractionResponseType.DeferredChannelMessageWithSource,
         data: {
@@ -77,17 +90,22 @@ class InteractionResponses {
         },
       },
       auth: false,
+      query: makeURLSearchParams({ with_response: options.withResponse ?? false }),
     });
     this.deferred = true;
 
-    return options.fetchReply ? this.fetchReply() : new InteractionResponse(this);
+    if (options.withResponse) {
+      return new InteractionCallbackResponse(this.client, response);
+    } else {
+      return options.fetchReply ? this.fetchReply() : new InteractionResponse(this);
+    }
   }
 
   /**
    * Creates a reply to this interaction.
    * <info>Use the `fetchReply` option to get the bot's reply message.</info>
    * @param {string|MessagePayload|InteractionReplyOptions} options The options for the reply
-   * @returns {Promise<Message|InteractionResponse>}
+   * @returns {Promise<Message|InteractionResponse|InteractionCallbackResponse>}
    * @example
    * // Reply to the interaction and fetch the response
    * interaction.reply({ content: 'Pong!', fetchReply: true })
@@ -112,17 +130,22 @@ class InteractionResponses {
 
     this.ephemeral = new MessageFlagsBitField(data.flags).has(MessageFlags.Ephemeral);
 
-    await this.client.rest.post(Routes.interactionCallback(this.id, this.token), {
+    const response = await this.client.rest.post(Routes.interactionCallback(this.id, this.token), {
       body: {
         type: InteractionResponseType.ChannelMessageWithSource,
         data,
       },
       files,
       auth: false,
+      query: makeURLSearchParams({ with_response: options.withResponse ?? false }),
     });
     this.replied = true;
 
-    return options.fetchReply ? this.fetchReply() : new InteractionResponse(this);
+    if (options.withResponse) {
+      return new InteractionCallbackResponse(this.client, response);
+    } else {
+      return options.fetchReply ? this.fetchReply() : new InteractionResponse(this);
+    }
   }
 
   /**
@@ -192,7 +215,7 @@ class InteractionResponses {
   /**
    * Defers an update to the message to which the component was attached.
    * @param {InteractionDeferUpdateOptions} [options] Options for deferring the update to this interaction
-   * @returns {Promise<Message|InteractionResponse>}
+   * @returns {Promise<Message|InteractionResponse|InteractionCallbackResponse>}
    * @example
    * // Defer updating and reset the component's loading state
    * interaction.deferUpdate()
@@ -201,21 +224,26 @@ class InteractionResponses {
    */
   async deferUpdate(options = {}) {
     if (this.deferred || this.replied) throw new DiscordjsError(ErrorCodes.InteractionAlreadyReplied);
-    await this.client.rest.post(Routes.interactionCallback(this.id, this.token), {
+    const response = await this.client.rest.post(Routes.interactionCallback(this.id, this.token), {
       body: {
         type: InteractionResponseType.DeferredMessageUpdate,
       },
       auth: false,
+      query: makeURLSearchParams({ with_response: options.withResponse ?? false }),
     });
     this.deferred = true;
 
-    return options.fetchReply ? this.fetchReply() : new InteractionResponse(this, this.message?.interaction?.id);
+    if (options.withResponse) {
+      return new InteractionCallbackResponse(this.client, response);
+    } else {
+      return options.fetchReply ? this.fetchReply() : new InteractionResponse(this, this.message?.interaction?.id);
+    }
   }
 
   /**
    * Updates the original message of the component on which the interaction was received on.
    * @param {string|MessagePayload|InteractionUpdateOptions} options The options for the updated message
-   * @returns {Promise<Message|void>}
+   * @returns {Promise<Message|InteractionResponse|InteractionCallbackResponse>}
    * @example
    * // Remove the components from the message
    * interaction.update({
@@ -234,34 +262,43 @@ class InteractionResponses {
 
     const { body: data, files } = await messagePayload.resolveBody().resolveFiles();
 
-    await this.client.rest.post(Routes.interactionCallback(this.id, this.token), {
+    const response = await this.client.rest.post(Routes.interactionCallback(this.id, this.token), {
       body: {
         type: InteractionResponseType.UpdateMessage,
         data,
       },
       files,
       auth: false,
+      query: makeURLSearchParams({ with_response: options.withResponse ?? false }),
     });
     this.replied = true;
 
-    return options.fetchReply ? this.fetchReply() : new InteractionResponse(this, this.message.interaction?.id);
+    if (options.withResponse) {
+      return new InteractionCallbackResponse(this.client, response);
+    } else {
+      return options.fetchReply ? this.fetchReply() : new InteractionResponse(this, this.message.interaction?.id);
+    }
   }
 
   /**
    * Shows a modal component
    * @param {ModalBuilder|ModalComponentData|APIModalInteractionResponseCallbackData} modal The modal to show
-   * @returns {Promise<void>}
+   * @param {ShowModalOptions} options The options for sending this interaction response
+   * @returns {Promise<InteractionCallbackResponse|void>}
    */
-  async showModal(modal) {
+  async showModal(modal, options = {}) {
     if (this.deferred || this.replied) throw new DiscordjsError(ErrorCodes.InteractionAlreadyReplied);
-    await this.client.rest.post(Routes.interactionCallback(this.id, this.token), {
+    const response = await this.client.rest.post(Routes.interactionCallback(this.id, this.token), {
       body: {
         type: InteractionResponseType.Modal,
         data: isJSONEncodable(modal) ? modal.toJSON() : this.client.options.jsonTransformer(modal),
       },
       auth: false,
+      query: makeURLSearchParams({ with_response: options.withResponse ?? false }),
     });
     this.replied = true;
+
+    return options.withResponse ? new InteractionCallbackResponse(this.client, response) : undefined;
   }
 
   /**
