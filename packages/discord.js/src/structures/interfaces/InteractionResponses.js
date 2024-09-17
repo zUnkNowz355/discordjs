@@ -44,7 +44,7 @@ class InteractionResponses {
 
   /**
    * Options for a reply to a {@link BaseInteraction}.
-   * @typedef {BaseMessageOptions|SharedInteractionResponseOptions} InteractionReplyOptions
+   * @typedef {BaseMessageOptionsWithPoll|SharedInteractionResponseOptions} InteractionReplyOptions
    * @property {boolean} [tts=false] Whether the message should be spoken aloud
    * @property {boolean} [ephemeral] Whether the reply should be ephemeral
    * @property {boolean} [fetchReply] Whether to fetch the reply
