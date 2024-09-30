@@ -14,6 +14,7 @@ const Partials = require('../util/Partials');
 const { flatten } = require('../util/Util');
 
 const Targets = {
+  /** @deprecated this was never used or a possible value to begin with */
   All: 'All',
   Guild: 'Guild',
   GuildScheduledEvent: 'GuildScheduledEvent',
