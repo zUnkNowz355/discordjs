@@ -181,6 +181,7 @@
 
  * @property {'PollAlreadyExpired'} PollAlreadyExpired
 
+ * @property {'PermissionOverwritesTypeMandatory'} PermissionOverwritesTypeMandatory
  * @property {'PermissionOverwritesTypeMismatch'} PermissionOverwritesTypeMismatch
  */
 
@@ -340,6 +341,7 @@ const keys = [
 
   'PollAlreadyExpired',
 
+  'PermissionOverwritesTypeMandatory',
   'PermissionOverwritesTypeMismatch',
 ];
 
