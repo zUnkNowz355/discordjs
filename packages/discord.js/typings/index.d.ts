@@ -189,6 +189,10 @@ import {
   RESTAPIInteractionCallbackObject,
   RESTAPIInteractionCallbackResourceObject,
   InteractionResponseType,
+  MessageReferenceType,
+  GuildScheduledEventRecurrenceRuleWeekday,
+  GuildScheduledEventRecurrenceRuleMonth,
+  GuildScheduledEventRecurrenceRuleFrequency,
 } from 'discord-api-types/v10';
 import { ChildProcess } from 'node:child_process';
 import { EventEmitter } from 'node:events';
@@ -555,7 +559,6 @@ export type GuildCacheMessage<Cached extends CacheType> = CacheTypeReducer<
 export type BooleanCache<Cached extends CacheType> = Cached extends 'cached' ? true : false;
 
 export abstract class CommandInteraction<Cached extends CacheType = CacheType> extends BaseInteraction<Cached> {
-  public authorizingIntegrationOwners: APIAuthorizingIntegrationOwnersMap;
   public type: InteractionType.ApplicationCommand;
   public get command(): ApplicationCommand | ApplicationCommand<{ guild: GuildResolvable }> | null;
   public options: Omit<
@@ -580,7 +583,6 @@ export abstract class CommandInteraction<Cached extends CacheType = CacheType> e
   public commandName: string;
   public commandType: ApplicationCommandType;
   public commandGuildId: Snowflake | null;
-  public context: InteractionContextType | null;
   public deferred: boolean;
   public ephemeral: boolean | null;
   public replied: boolean;
@@ -1321,8 +1323,7 @@ export class CommandInteractionOptionResolver<Cached extends CacheType = CacheTy
   ): NonNullable<CommandInteractionOption<Cached>['member' | 'role' | 'user']> | null;
   public getMessage(name: string, required: true): NonNullable<CommandInteractionOption<Cached>['message']>;
   public getMessage(name: string, required?: boolean): NonNullable<CommandInteractionOption<Cached>['message']> | null;
-  public getFocused(getFull: true): AutocompleteFocusedOption;
-  public getFocused(getFull?: boolean): string;
+  public getFocused(): AutocompleteFocusedOption;
 }
 
 export class ContextMenuCommandInteraction<Cached extends CacheType = CacheType> extends CommandInteraction<Cached> {
@@ -1619,7 +1620,7 @@ export abstract class GuildChannel extends BaseChannel {
   public get permissionsLocked(): boolean | null;
   public get position(): number;
   public rawPosition: number;
-  public type: Exclude<ChannelType, ChannelType.DM | ChannelType.GroupDM>;
+  public type: GuildChannelTypes;
   public get viewable(): boolean;
   public clone(options?: GuildChannelCloneOptions): Promise<this>;
   public delete(reason?: string): Promise<this>;
@@ -1791,6 +1792,7 @@ export class GuildScheduledEvent<Status extends GuildScheduledEventStatus = Guil
   public entityMetadata: GuildScheduledEventEntityMetadata | null;
   public userCount: number | null;
   public creator: User | null;
+  public recurrenceRule: GuildScheduledEventRecurrenceRule | null;
   public get createdTimestamp(): number;
   public get createdAt(): Date;
   public get scheduledStartAt(): Date | null;
@@ -1827,6 +1829,26 @@ export class GuildScheduledEvent<Status extends GuildScheduledEventStatus = Guil
   public isCanceled(): this is GuildScheduledEvent<GuildScheduledEventStatus.Canceled>;
   public isCompleted(): this is GuildScheduledEvent<GuildScheduledEventStatus.Completed>;
   public isScheduled(): this is GuildScheduledEvent<GuildScheduledEventStatus.Scheduled>;
+}
+
+export interface GuildScheduledEventRecurrenceRule {
+  startTimestamp: number;
+  get startAt(): Date;
+  endTimestamp: number | null;
+  get endAt(): Date | null;
+  frequency: GuildScheduledEventRecurrenceRuleFrequency;
+  interval: number;
+  byWeekday: readonly GuildScheduledEventRecurrenceRuleWeekday[] | null;
+  byNWeekday: readonly GuildScheduledEventRecurrenceRuleNWeekday[] | null;
+  byMonth: readonly GuildScheduledEventRecurrenceRuleMonth[] | null;
+  byMonthDay: readonly number[] | null;
+  byYearDay: readonly number[] | null;
+  count: number | null;
+}
+
+export interface GuildScheduledEventRecurrenceRuleNWeekday {
+  n: number;
+  day: GuildScheduledEventRecurrenceRuleWeekday;
 }
 
 export class GuildTemplate extends Base {
@@ -1936,6 +1958,7 @@ export class BaseInteraction<Cached extends CacheType = CacheType> extends Base 
   private readonly _cacheType: Cached;
   protected constructor(client: Client<true>, data: RawInteractionData);
   public applicationId: Snowflake;
+  public authorizingIntegrationOwners: APIAuthorizingIntegrationOwnersMap;
   public get channel(): CacheTypeReducer<
     Cached,
     GuildTextBasedChannel | null,
@@ -1944,6 +1967,7 @@ export class BaseInteraction<Cached extends CacheType = CacheType> extends Base 
     TextBasedChannel | null
   >;
   public channelId: Snowflake | null;
+  public context: InteractionContextType | null;
   public get createdAt(): Date;
   public get createdTimestamp(): number;
   public get guild(): CacheTypeReducer<Cached, Guild, null>;
@@ -2128,7 +2152,13 @@ export interface MessageCall {
   participants: readonly Snowflake[];
 }
 
-export type MessageComponentType = Exclude<ComponentType, ComponentType.TextInput | ComponentType.ActionRow>;
+export type MessageComponentType =
+  | ComponentType.Button
+  | ComponentType.ChannelSelect
+  | ComponentType.MentionableSelect
+  | ComponentType.RoleSelect
+  | ComponentType.StringSelect
+  | ComponentType.UserSelect;
 
 export interface MessageCollectorOptionsParams<
   ComponentType extends MessageComponentType,
@@ -2227,6 +2257,7 @@ export class Message<InGuild extends boolean = boolean> extends Base {
   public webhookId: Snowflake | null;
   public flags: Readonly<MessageFlagsBitField>;
   public reference: MessageReference | null;
+  public messageSnapshots: Collection<Snowflake, MessageSnapshot>;
   public awaitMessageComponent<ComponentType extends MessageComponentType>(
     options?: AwaitMessageCollectorOptionsParams<ComponentType, InGuild>,
   ): Promise<MappedInteractionTypes<InGuild>[ComponentType]>;
@@ -2320,11 +2351,11 @@ export class MessageComponentInteraction<Cached extends CacheType = CacheType> e
   public get component(): CacheTypeReducer<
     Cached,
     MessageActionRowComponent,
-    Exclude<APIMessageComponent, APIActionRowComponent<APIMessageActionRowComponent>>,
-    MessageActionRowComponent | Exclude<APIMessageComponent, APIActionRowComponent<APIMessageActionRowComponent>>,
-    MessageActionRowComponent | Exclude<APIMessageComponent, APIActionRowComponent<APIMessageActionRowComponent>>
+    APIMessageActionRowComponent,
+    MessageActionRowComponent | APIMessageActionRowComponent,
+    MessageActionRowComponent | APIMessageActionRowComponent
   >;
-  public componentType: Exclude<ComponentType, ComponentType.ActionRow | ComponentType.TextInput>;
+  public componentType: MessageComponentType;
   public customId: string;
   public channelId: Snowflake;
   public deferred: boolean;
@@ -2472,13 +2503,13 @@ export class MessagePayload {
 
 export class MessageReaction {
   private constructor(client: Client<true>, data: RawMessageReactionData, message: Message);
-  private _emoji: GuildEmoji | ReactionEmoji;
+  private _emoji: GuildEmoji | ReactionEmoji | ApplicationEmoji;
 
   public burstColors: string[] | null;
   public readonly client: Client<true>;
   public count: number;
   public countDetails: ReactionCountDetailsData;
-  public get emoji(): GuildEmoji | ReactionEmoji;
+  public get emoji(): GuildEmoji | ReactionEmoji | ApplicationEmoji;
   public me: boolean;
   public meBurst: boolean;
   public message: Message | PartialMessage;
@@ -3407,7 +3438,7 @@ export class ThreadMember<HasMemberData extends boolean = boolean> extends Base 
   public thread: AnyThreadChannel;
   public get user(): User | null;
   public get partial(): false;
-  public remove(reason?: string): Promise<ThreadMember>;
+  public remove(): Promise<ThreadMember>;
 }
 
 export type ThreadMemberFlagsString = keyof typeof ThreadMemberFlags;
@@ -3471,7 +3502,6 @@ export class User extends Base {
   public displayAvatarURL(options?: ImageURLOptions): string;
   public equals(user: User): boolean;
   public fetch(force?: boolean): Promise<User>;
-  public fetchFlags(force?: boolean): Promise<UserFlagsBitField>;
   public toString(): UserMention;
 }
 
@@ -4680,7 +4710,7 @@ export class ThreadMemberManager extends CachedManager<Snowflake, ThreadMember, 
   private constructor(thread: ThreadChannel, iterable?: Iterable<RawThreadMemberData>);
   public thread: AnyThreadChannel;
   public get me(): ThreadMember | null;
-  public add(member: UserResolvable | '@me', reason?: string): Promise<Snowflake>;
+  public add(member: UserResolvable | '@me'): Promise<Snowflake>;
 
   public fetch(
     options: ThreadMember<true> | ((FetchThreadMemberOptions & { withMember: true }) | { member: ThreadMember<true> }),
@@ -4694,7 +4724,7 @@ export class ThreadMemberManager extends CachedManager<Snowflake, ThreadMember, 
 
   public fetch(options?: FetchThreadMembersWithoutGuildMemberDataOptions): Promise<Collection<Snowflake, ThreadMember>>;
   public fetchMe(options?: BaseFetchOptions): Promise<ThreadMember>;
-  public remove(member: UserResolvable | '@me', reason?: string): Promise<Snowflake>;
+  public remove(member: UserResolvable | '@me'): Promise<Snowflake>;
 }
 
 export class UserManager extends CachedManager<Snowflake, User, UserResolvable> {
@@ -4703,7 +4733,6 @@ export class UserManager extends CachedManager<Snowflake, User, UserResolvable> 
   public createDM(user: UserResolvable, options?: BaseFetchOptions): Promise<DMChannel>;
   public deleteDM(user: UserResolvable): Promise<DMChannel>;
   public fetch(user: UserResolvable, options?: BaseFetchOptions): Promise<User>;
-  public fetchFlags(user: UserResolvable, options?: BaseFetchOptions): Promise<UserFlagsBitField>;
   public send(user: UserResolvable, options: string | MessagePayload | MessageCreateOptions): Promise<Message>;
 }
 
@@ -5719,7 +5748,7 @@ export type EmojiIdentifierResolvable =
   | `<${'' | 'a'}:${string}:${Snowflake}>`
   | string;
 
-export type EmojiResolvable = Snowflake | GuildEmoji | ReactionEmoji;
+export type EmojiResolvable = Snowflake | GuildEmoji | ReactionEmoji | ApplicationEmoji;
 
 export interface FetchApplicationCommandOptions extends BaseFetchOptions {
   guildId?: Snowflake;
@@ -6207,14 +6236,29 @@ export interface GuildScheduledEventCreateOptions {
   entityMetadata?: GuildScheduledEventEntityMetadataOptions;
   image?: BufferResolvable | Base64Resolvable | null;
   reason?: string;
+  recurrenceRule?: GuildScheduledEventRecurrenceRuleOptions;
+}
+
+export interface GuildScheduledEventRecurrenceRuleOptions {
+  startAt: DateResolvable;
+  endAt: DateResolvable;
+  frequency: GuildScheduledEventRecurrenceRuleFrequency;
+  interval: number;
+  byWeekday: readonly GuildScheduledEventRecurrenceRuleWeekday[];
+  byNWeekday: readonly GuildScheduledEventRecurrenceRuleNWeekday[];
+  byMonth: readonly GuildScheduledEventRecurrenceRuleMonth[];
+  byMonthDay: readonly number[];
+  byYearDay: readonly number[];
+  count: number;
 }
 
 export interface GuildScheduledEventEditOptions<
   Status extends GuildScheduledEventStatus,
   AcceptableStatus extends GuildScheduledEventSetStatusArg<Status>,
-> extends Omit<Partial<GuildScheduledEventCreateOptions>, 'channel'> {
+> extends Omit<Partial<GuildScheduledEventCreateOptions>, 'channel' | 'recurrenceRule'> {
   channel?: GuildVoiceChannelResolvable | null;
   status?: AcceptableStatus;
+  recurrenceRule?: GuildScheduledEventRecurrenceRuleOptions | null;
 }
 
 export interface GuildScheduledEventEntityMetadata {
@@ -6484,6 +6528,26 @@ export interface MessageMentionOptions {
 
 export type MessageMentionTypes = 'roles' | 'users' | 'everyone';
 
+export interface MessageSnapshot
+  extends Partialize<
+    Message,
+    null,
+    Exclude<
+      keyof Message,
+      | 'attachments'
+      | 'client'
+      | 'components'
+      | 'content'
+      | 'createdTimestamp'
+      | 'editedTimestamp'
+      | 'embeds'
+      | 'flags'
+      | 'mentions'
+      | 'stickers'
+      | 'type'
+    >
+  > {}
+
 export interface BaseMessageOptions {
   content?: string;
   embeds?: readonly (JSONEncodable<APIEmbed> | APIEmbed)[];
@@ -6539,6 +6603,7 @@ export interface MessageReference {
   channelId: Snowflake;
   guildId: Snowflake | undefined;
   messageId: Snowflake | undefined;
+  type: MessageReferenceType;
 }
 
 export type MessageResolvable = Message | Snowflake;
