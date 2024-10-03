@@ -185,6 +185,10 @@ import {
   InviteType,
   ReactionType,
   APIAuthorizingIntegrationOwnersMap,
+  RESTPostAPIInteractionCallbackWithResponseResult,
+  RESTAPIInteractionCallbackObject,
+  RESTAPIInteractionCallbackResourceObject,
+  InteractionResponseType,
   MessageReferenceType,
   GuildScheduledEventRecurrenceRuleWeekday,
   GuildScheduledEventRecurrenceRuleMonth,
@@ -280,6 +284,10 @@ export class Activity {
   public url: string | null;
   public equals(activity: Activity): boolean;
   public toString(): string;
+}
+
+export interface ActivityInstance {
+  id: string;
 }
 
 export type ActivityFlagsString = keyof typeof ActivityFlags;
@@ -582,6 +590,9 @@ export abstract class CommandInteraction<Cached extends CacheType = CacheType> e
   public inGuild(): this is CommandInteraction<'raw' | 'cached'>;
   public inCachedGuild(): this is CommandInteraction<'cached'>;
   public inRawGuild(): this is CommandInteraction<'raw'>;
+  public deferReply(
+    options: InteractionDeferReplyOptions & { withResponse: true },
+  ): Promise<InteractionCallbackResponse>;
   public deferReply(
     options: InteractionDeferReplyOptions & { fetchReply: true },
   ): Promise<Message<BooleanCache<Cached>>>;
@@ -1993,6 +2004,37 @@ export class BaseInteraction<Cached extends CacheType = CacheType> extends Base 
   public isMentionableSelectMenu(): this is MentionableSelectMenuInteraction<Cached>;
   public isChannelSelectMenu(): this is ChannelSelectMenuInteraction<Cached>;
   public isRepliable(): this is RepliableInteraction<Cached>;
+}
+
+export class InteractionCallback {
+  public constructor(client: Client<true>, data: RESTAPIInteractionCallbackObject);
+  public activityInstanceId: string | null;
+  public readonly client: Client<true>;
+  public get channel(): TextBasedChannel | null;
+  public channelId: Snowflake | null;
+  public get createdAt(): Date;
+  public get createdTimestamp(): number;
+  public get guild(): Guild | null;
+  public guildId: Snowflake | null;
+  public id: Snowflake;
+  public responseMessageEphemeral: boolean | null;
+  public responseMessageId: Snowflake | null;
+  public responseMessageLoading: boolean | null;
+  public type: InteractionType;
+}
+
+export class InteractionCallbackResponse {
+  public constructor(client: Client<true>, data: RESTPostAPIInteractionCallbackWithResponseResult);
+  public readonly client: Client<true>;
+  public interaction: InteractionCallback;
+  public resource: InteractionCallbackResource | null;
+}
+
+export class InteractionCallbackResource {
+  public constructor(client: Client<true>, data: RESTAPIInteractionCallbackResourceObject);
+  public activityInstance: ActivityInstance | null;
+  public message: Message | null;
+  public type: InteractionResponseType;
 }
 
 export class InteractionCollector<Interaction extends CollectedInteraction> extends Collector<
@@ -6328,14 +6370,14 @@ export interface InteractionCollectorOptions<
   interactionResponse?: InteractionResponse<BooleanCache<Cached>>;
 }
 
-export interface InteractionDeferReplyOptions {
+export interface InteractionDeferReplyOptions extends SharedInteractionResponseOptions {
   ephemeral?: boolean;
   fetchReply?: boolean;
 }
 
 export interface InteractionDeferUpdateOptions extends Omit<InteractionDeferReplyOptions, 'ephemeral'> {}
 
-export interface InteractionReplyOptions extends BaseMessageOptionsWithPoll {
+export interface InteractionReplyOptions extends BaseMessageOptionsWithPoll, SharedInteractionResponseOptions {
   tts?: boolean;
   ephemeral?: boolean;
   fetchReply?: boolean;
@@ -6345,7 +6387,7 @@ export interface InteractionReplyOptions extends BaseMessageOptionsWithPoll {
   >;
 }
 
-export interface InteractionUpdateOptions extends MessageEditOptions {
+export interface InteractionUpdateOptions extends MessageEditOptions, SharedInteractionResponseOptions {
   fetchReply?: boolean;
 }
 
@@ -6856,6 +6898,12 @@ export interface ShardingManagerOptions {
   token?: string;
   execArgv?: readonly string[];
 }
+
+export interface SharedInteractionResponseOptions {
+  withResponse?: boolean;
+}
+
+export type ShowModalOptions = SharedInteractionResponseOptions;
 
 export { Snowflake };
 
