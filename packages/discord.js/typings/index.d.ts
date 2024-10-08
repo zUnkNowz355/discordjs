@@ -2520,7 +2520,7 @@ export class ModalSubmitInteraction<Cached extends CacheType = CacheType> extend
 export class NewsChannel extends BaseGuildTextChannel {
   public threads: GuildTextThreadManager<AllowedThreadTypeForNewsChannel>;
   public type: ChannelType.GuildAnnouncement;
-  public addFollower(channel: TextChannelResolvable, reason?: string): Promise<NewsChannel>;
+  public addFollower(channel: TextChannelResolvable, reason?: string): Promise<Snowflake>;
 }
 
 export type NewsChannelResolvable = NewsChannel | Snowflake;
